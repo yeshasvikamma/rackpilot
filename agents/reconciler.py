@@ -31,20 +31,29 @@ def reconcile(sources: list[dict]) -> ConstraintSpec:
             f"Extract structured facts as JSON only: {READER_SCHEMA}\n"
             f"Source name: {src['name']}\n\n{src['data']}"
         )
-        raw = chat("source_reader", [{"role": "user", "content": prompt}])
+        raw = chat("source_reader", [{"role": "user", "content": prompt}], max_tokens=1024)
         facts = _parse_json(raw)
         facts["source_name"] = src["name"]
         extracted.append(facts)
 
     reconcile_prompt = (
-        "Reconcile conflicting datacenter facts from multiple sources. "
-        "Prefer authoritative dcim for nameplate values; lower confidence when sources disagree.\n"
+        "Reconcile conflicting datacenter facts from multiple sources.\n\n"
+        "Trust and confidence rules:\n"
+        "- DCIM nameplate data = authoritative = confidence 0.90-0.99\n"
+        "- Telemetry/measured data that agrees with DCIM = confidence 0.85-0.95\n"
+        "- Telemetry that DISAGREES with DCIM = confidence 0.60-0.75 for the telemetry value, 0.85 for the DCIM value\n"
+        "- If sources agree = hard: true\n"
+        "- If sources disagree = use DCIM as hard: true, telemetry as soft: false\n\n"
+        "You MUST return differentiated confidence scores based on source trustworthiness. "
+        "DCIM nameplate = 0.90+. Telemetry that confirms DCIM = 0.85+. "
+        "Telemetry that contradicts DCIM = 0.60-0.75. Never return 0.5 for everything — "
+        "that means you failed to reason about the conflict. Return JSON only.\n\n"
         f"Sources:\n{json.dumps(extracted, indent=2)}\n\n"
         'Return JSON only: {"power_kw": float, "fabric_class": str, "constraints": '
         '[{"type": "power_kw"|"fabric_class", "confidence": float, "source": "dcim"|"telemetry"}]}. '
         "One constraint per reconciled fact. Set source to the winning source name."
     )
-    reconciled = _parse_json(chat("reconciler", [{"role": "user", "content": reconcile_prompt}]))
+    reconciled = _parse_json(chat("reconciler", [{"role": "user", "content": reconcile_prompt}], max_tokens=2048))
 
     def _first(key: str, default):
         for item in extracted:
