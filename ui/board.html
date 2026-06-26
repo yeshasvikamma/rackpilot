@@ -7,26 +7,26 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', sans-serif; background: #0d0d1a; color: #e8eaf0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+    body { font-family: 'Inter', sans-serif; background: #f0f2f5; color: #1a1a2a; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
 
     /* Top bar */
-    #topbar { height: 56px; background: #12122a; border-bottom: 1px solid #1e1e3f; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; }
+    #topbar { height: 56px; background: #12122a; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; }
     #topbar h1 { font-size: 20px; font-weight: 700; color: #00e676; letter-spacing: -0.5px; display: inline; }
-    #topbar .subtitle { font-size: 12px; color: #6b7280; margin-left: 10px; }
-    #topbar input { background: #1e1e3f; border: 1px solid #2a2d4a; color: #e8eaf0; padding: 8px 14px; border-radius: 6px; font-size: 13px; width: 260px; font-family: 'Inter', sans-serif; outline: none; }
+    #topbar .subtitle { font-size: 12px; color: #4b5563; margin-left: 10px; }
+    #topbar input { background: #1e1e3f; border: 1px solid #2a2d4a; color: #1a1a2a; padding: 8px 14px; border-radius: 6px; font-size: 13px; width: 260px; font-family: 'Inter', sans-serif; outline: none; }
     #topbar button { background: #00e676; color: #0d0d1a; border: none; padding: 8px 20px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; margin-left: 10px; font-family: 'Inter', sans-serif; }
 
     /* Main layout */
     #main { display: flex; flex: 1; overflow: hidden; }
     #left { width: 55%; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
-    #right { width: 45%; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; border-left: 1px solid #1e1e3f; }
+    #right { width: 45%; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; border-left: 1px solid #e2e8f0; }
 
     /* Cards */
-    .card { background: #12122a; border: 1px solid #1e1e3f; border-radius: 10px; padding: 16px; }
-    .card-title { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: #6b7280; text-transform: uppercase; margin-bottom: 12px; }
+    .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; }
+    .card-title { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: #4b5563; text-transform: uppercase; margin-bottom: 12px; }
 
     /* Pod sections */
-    .pod-card { background: #12122a; border: 1px solid #1e1e3f; border-radius: 10px; padding: 16px; }
+    .pod-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; }
     .pod-label { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; color: #448aff; text-transform: uppercase; margin-bottom: 10px; }
     .rack-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 
@@ -46,24 +46,24 @@
 
     /* Pareto cards */
     .pareto-row { display: flex; gap: 10px; }
-    .pareto-card { flex: 1; background: #0d0d1a; border: 1px solid #1e1e3f; border-radius: 8px; padding: 12px; border-top-width: 3px; }
+    .pareto-card { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; border-top-width: 3px; }
     .pareto-card:nth-child(1) { border-top-color: #00e676; }
     .pareto-card:nth-child(2) { border-top-color: #ffd740; }
     .pareto-card:nth-child(3) { border-top-color: #448aff; }
-    .pareto-label { font-size: 11px; font-weight: 600; color: #e8eaf0; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .pareto-spend { font-size: 18px; font-weight: 700; color: #e8eaf0; margin-bottom: 4px; }
-    .pareto-meta { font-size: 10px; color: #6b7280; }
+    .pareto-label { font-size: 11px; font-weight: 600; color: #1a1a2a; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pareto-spend { font-size: 18px; font-weight: 700; color: #1a1a2a; margin-bottom: 4px; }
+    .pareto-meta { font-size: 10px; color: #1a1a2a; }
 
     /* Text panels */
-    .panel-text { font-size: 13px; line-height: 1.7; color: #c8cad4; white-space: pre-wrap; }
-    .violation-item { padding: 8px 0; border-bottom: 1px solid #1e1e3f; font-size: 12px; color: #c8cad4; }
+    .panel-text { font-size: 13px; line-height: 1.7; color: #4b5563; white-space: pre-wrap; }
+    .violation-item { padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #4b5563; }
     .violation-item:last-child { border-bottom: none; }
     .iis-block { background: #0d0d1a; border-radius: 6px; padding: 10px; font-size: 12px; color: #c8cad4; margin-bottom: 8px; }
     .iis-block:last-child { margin-bottom: 0; }
     .iis-constraints { font-family: monospace; color: #ffd740; font-size: 11px; margin-bottom: 4px; }
-    .critique-text { font-size: 13px; line-height: 1.7; color: #c8cad4; white-space: pre-wrap; border-left: 3px solid #ff4757; padding-left: 12px; }
+    .critique-text { font-size: 13px; line-height: 1.7; color: #4b5563; white-space: pre-wrap; border-left: 3px solid #ff4757; padding-left: 12px; }
     .ticket-text { font-size: 14px; font-weight: 600; color: #00e676; }
-    .placement-item { font-size: 12px; color: #c8cad4; padding: 4px 0; font-family: monospace; }
+    .placement-item { font-size: 12px; color: #4b5563; padding: 4px 0; font-family: monospace; }
   </style>
 </head>
 <body>
@@ -157,8 +157,14 @@
       document.getElementById("pareto").innerHTML = (r.pareto_plans ?? [])
         .map(p => `<div class="pareto-card"><div class="pareto-label">${p.label}</div><div class="pareto-spend">$${p.new_spend_usd.toLocaleString()}</div><div class="pareto-meta">resilience ${p.resilience}<br>headroom ${p.future_headroom}</div></div>`).join("");
 
-      document.getElementById("explanation").textContent = data.explanation ?? "";
-      document.getElementById("critique").textContent = data.critique ?? "";
+      document.getElementById("explanation").textContent = (data.explanation ?? "")
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/#{1,3} /g, '')
+        .replace(/^- /gm, '• ');
+      document.getElementById("critique").textContent = (data.critique ?? "")
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/#{1,3} /g, '')
+        .replace(/^- /gm, '• ');
       document.getElementById("ticket").textContent = data.ticket ?? "";
     }
 
