@@ -74,7 +74,7 @@ def solve(spec: ConstraintSpec) -> SolverResult:
             Violation(
                 rack_id="r_201",
                 pod="A",
-                rule="power_n1",
+                rule="power_n_plus_1",
                 detail="Pod A feed pair A1/A2 cannot carry 8x40kW and survive one feed loss.",
             ),
             Violation(
@@ -93,7 +93,7 @@ def solve(spec: ConstraintSpec) -> SolverResult:
         # --- the IIS proof: three rules that cannot all hold at once ---
         iis=[
             IIS(
-                constraints=["power_n1", "thermal_row_budget", "space_contiguous_u"],
+                constraints=["power_n_plus_1", "thermal_row_budget", "space_contiguous_u"],
                 message=(
                     "No pod can satisfy all three at once for an 8x40kW N+1 batch: "
                     "the only contiguous-U space (Pod A) lacks N+1 power headroom, and "

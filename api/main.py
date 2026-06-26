@@ -119,7 +119,7 @@ def _demo_spec(req: HandleRequest) -> ConstraintSpec:
         for i in range(1, 9)
     ]
     constraints = [
-        Constraint(type="power_n1", hard=True, confidence=0.99, source="eaton-pdu"),
+        Constraint(type="power_n_plus_1", hard=True, confidence=0.99, source="eaton-pdu"),
         Constraint(type="thermal_row_budget", hard=True, confidence=0.95, source="crac-telemetry"),
         Constraint(type="fabric_oversub", hard=True, confidence=0.90, source="netbox"),
         Constraint(type="space_contiguous_u", hard=True, confidence=0.98, source="dcim-floorplan"),
