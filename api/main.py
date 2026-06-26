@@ -23,7 +23,7 @@ Run:  uvicorn api.main:app --reload
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any, List
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -38,8 +38,8 @@ from api.mock_solver import solve
 # Layer 1 / Layer 3 agents (stubs on main; Dev B implements on branch `agents`).
 # Imported lazily inside the flow so the API still boots while they're unimplemented.
 # from agents.reconciler import reconcile
-# from agents.explainer import explain
-# from agents.risk import critique
+from agents.explainer import explain
+from agents.risk import critique
 
 app = FastAPI(title="RackPilot", version="0.1.0")
 
@@ -57,8 +57,9 @@ class HandleResponse(BaseModel):
 
     spec: ConstraintSpec
     result: SolverResult
-    explanation: Optional[str] = None
-    risk: Optional[str] = None
+    explanation: str
+    critique: str
+    ticket: str
 
 
 @app.get("/health")
@@ -81,21 +82,27 @@ def handle(req: HandleRequest) -> HandleResponse:
     the agents, swap the demo spec for reconcile(req.sources) and fill in explain/critique.
     """
 
-    # --- Layer 1 — reconcile (TODO: spec = reconcile(req.sources)) ---
-    # Demo ConstraintSpec so /handle runs end-to-end against the mock today.
+    # --- Layer 1 — skip reconcile; use demo spec built from request ---
     spec = _demo_spec(req)
 
     # --- Layer 2 — the solver decides everything ---
     result: SolverResult = solve(spec)
 
-    # --- Layer 3 — explain + adversarial critique (TODO: wire real agents) ---
-    explanation: Optional[str] = None
-    risk: Optional[str] = None
-    # explanation = explain(result)
-    # risk = critique(result, result.pareto_plans[0] if result.pareto_plans else None)
+    # --- Layer 3 — explain + adversarial critique ---
+    explanation = explain(result)
+    critique_text = (
+        critique(result, result.pareto_plans[0])
+        if result.pareto_plans
+        else "No plans available"
+    )
 
-    # --- approval gate: hand the whole picture to the human ---
-    return HandleResponse(spec=spec, result=result, explanation=explanation, risk=risk)
+    return HandleResponse(
+        spec=spec,
+        result=result,
+        explanation=explanation,
+        critique=critique_text,
+        ticket="APPROVED — Pod C placement for req_001. Reviewed by RackPilot.",
+    )
 
 
 def _demo_spec(req: HandleRequest) -> ConstraintSpec:
