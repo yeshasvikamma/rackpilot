@@ -1,33 +1,45 @@
-"""
-agents/risk.py — Layer 3 adversarial critique.  (STUB — Dev B)
-
-A skeptic. Given the solver's result and a chosen plan, it argues the other side:
-what could go wrong, which soft constraints were leaned on, where the provenance is
-weak. It runs on a deliberately INDEPENDENT model family (DeepSeek-V4-Pro) so its
-critique is not correlated with the reconciler/explainer — it is meant to disagree.
-
-It critiques; it does NOT decide. The solver still owns correctness.
-
-Model: DeepSeek-V4-Pro (independent family on purpose). See agents/CLAUDE.md.
-The real implementation lives on branch `agents`.
-"""
+"""Layer 3 adversarial critique: challenge a Pareto plan against the solver result."""
 
 from __future__ import annotations
 
-from typing import Any
+from contracts import ConstraintSpec, ParetoPlan, SolverResult
+from agents.gmi_client import chat
 
-from contracts import SolverResult
+
+def critique(result: SolverResult, plan: ParetoPlan) -> str:
+    placements = "\n".join(
+        f"- {p.rack_id}: pod {p.pod}, {p.rack_enclosure} U{p.u_start}"
+        for p in result.placements
+    ) or "None"
+    violations = "\n".join(
+        f"- {v.rack_id} in pod {v.pod}, rule {v.rule}: {v.detail}"
+        for v in result.violations
+    ) or "None"
+    iis = "\n".join(
+        f"- constraints {i.constraints}: {i.message}" for i in result.iis
+    ) or "None"
+
+    prompt = (
+        "You are an adversarial risk reviewer. Challenge this plan. Find weaknesses, hidden costs, "
+        "safety risks, or unconsidered failure modes. Be specific and cite the data provided. "
+        "Do not recommend an alternative — only challenge. Be concise, under 200 words.\n\n"
+        f"Status: {result.status}\n\n"
+        f"Placements:\n{placements}\n\n"
+        f"Violations:\n{violations}\n\n"
+        f"IIS:\n{iis}\n\n"
+        f"Plan under review: {plan.label}\n"
+        f"Spend: ${plan.new_spend_usd:,.0f}\n"
+        f"Resilience: {plan.resilience:.2f}\n"
+        f"Headroom: {plan.future_headroom:.2f}"
+    )
+    response = chat("risk", [{"role": "user", "content": prompt}], max_tokens=2048)
+    if not response:
+        return "Risk review unavailable — model returned empty response."
+    return response
 
 
-def critique(result: SolverResult, plan: Any) -> str:
-    """
-    Produce an adversarial risk critique of a chosen plan against the solver result.
+if __name__ == "__main__":
+    from api.mock_solver import solve
 
-    Args:
-        result: Contract B from the solver.
-        plan:   the plan under consideration (e.g. one ParetoPlan the human is eyeing).
-
-    Returns:
-        A critique string surfacing dissent and risk for the human to weigh.
-    """
-    raise NotImplementedError("Dev B implements critique() on branch `agents`.")
+    result = solve(ConstraintSpec(request_id="demo-risk", mode="place_batch"))
+    print(critique(result, result.pareto_plans[0]))
