@@ -1,48 +1,44 @@
-"""
-agents/gmi_client.py — GMI client helper.  (STUB — Dev B)
-
-GMI is OpenAI-compatible. We talk to it with the OpenAI SDK pointed at GMI_BASE_URL,
-authenticating with GMI_API_KEY. This module centralizes that so every agent gets a
-consistently configured client, and so model names live in one place.
-
-The real implementation lives on branch `agents`.
-"""
-
-from __future__ import annotations
+"""GMI Cloud OpenAI-compatible client for RackPilot agents."""
 
 import os
 
-# Role -> model name. Single source of truth; see agents/CLAUDE.md.
+from dotenv import load_dotenv
+import openai
+
+load_dotenv()
+
+GMI_BASE_URL = os.getenv("GMI_BASE_URL")
+GMI_API_KEY = os.getenv("GMI_API_KEY")
+
 MODELS = {
-    "reconciler": "nemotron-3-super",
-    "source_reader": "nemotron-3-nano",
-    "explainer": "gpt-5.4",
-    "explainer_fallback": "nemotron-3-super",
-    "risk": "deepseek-v4-pro",      # independent family on purpose
-    "forecaster": "nemotron-3-super",
+    "reconciler": "nvidia/nemotron-3-ultra-550b-a55b",
+    "source_reader": "openai/gpt-5.4-nano",
+    "explainer": "openai/gpt-5.4",
+    "risk": "deepseek-ai/DeepSeek-V4-Pro",
+    "forecaster": "nvidia/nemotron-3-ultra-550b-a55b",
 }
 
 
-def get_client(model_name: str):
-    """
-    Return an OpenAI-SDK client configured for GMI, paired with the model to use.
+def get_client():
+    return openai.OpenAI(base_url=GMI_BASE_URL, api_key=GMI_API_KEY)
 
-    Reads GMI_BASE_URL and GMI_API_KEY from the environment and points the OpenAI
-    client at GMI's OpenAI-compatible endpoint.
 
-    Args:
-        model_name: a key from MODELS (e.g. "reconciler") or a literal model id.
+def chat(role: str, messages: list, max_tokens: int = 512) -> str:
+    if role not in MODELS:
+        raise ValueError(f"Unknown role: {role!r}. Valid roles: {list(MODELS)}")
+    resp = get_client().chat.completions.create(
+        model=MODELS[role],
+        messages=messages,
+        max_tokens=max_tokens,
+    )
+    return resp.choices[0].message.content
 
-    Returns:
-        Whatever the agents settle on (e.g. a tuple of (client, resolved_model_id)).
 
-    Example (to be implemented on branch `agents`):
-
-        from openai import OpenAI
-        client = OpenAI(
-            base_url=os.environ["GMI_BASE_URL"],
-            api_key=os.environ["GMI_API_KEY"],
-        )
-        return client, MODELS.get(model_name, model_name)
-    """
-    raise NotImplementedError("Dev B implements get_client() on branch `agents`.")
+if __name__ == "__main__":
+    test_msg = [{"role": "user", "content": "Reply with OK and your model name. Nothing else."}]
+    for role in MODELS:
+        try:
+            result = chat(role, test_msg)
+            print(f"[{role}] {result}")
+        except Exception as e:
+            print(f"[{role}] ERROR: {e}")
