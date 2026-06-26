@@ -4,67 +4,92 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RackPilot — Facility Board</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; }
-    html, body { height: 100vh; margin: 0; overflow: hidden; background: #1a1a2e; color: #e6e6e6; font-family: monospace; font-size: 12px; }
-    .app { display: flex; flex-direction: column; height: 100vh; }
-    .topbar { display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 0 16px; border-bottom: 1px solid #333; flex-shrink: 0; }
-    .topbar h1 { margin: 0; font-size: 18px; color: #00ff88; }
-    .topbar-controls { display: flex; gap: 8px; }
-    .topbar input { background: #0f0f1a; border: 1px solid #444; color: #e6e6e6; padding: 6px 10px; width: 220px; font-family: monospace; }
-    .topbar button { background: #4488ff; border: none; color: #fff; padding: 6px 16px; cursor: pointer; font-family: monospace; }
-    .topbar button:hover { opacity: 0.85; }
-    .main { display: flex; flex: 1; min-height: 0; }
-    .facility { width: 60%; padding: 12px; border-right: 1px solid #333; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
-    .facility h2 { margin: 0 0 6px; font-size: 13px; color: #888; }
-    .pod { flex: 1; min-height: 0; }
-    .pod-label { font-size: 11px; color: #4488ff; margin-bottom: 4px; }
-    .rack-grid { display: flex; flex-wrap: wrap; gap: 4px; }
-    .rack { width: 52px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 9px; border-radius: 3px; border: 2px solid transparent; }
-    .rack.healthy { background: #00ff88; color: #1a1a2e; }
-    .rack.violated { background: #ff4444; color: #fff; }
-    .rack.newly-violating { background: #ff4444; color: #fff; animation: pulse 1.2s ease-in-out infinite; }
-    .rack.placed { border-color: #4488ff; }
-    @keyframes pulse { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255,68,68,0.6); } 50% { opacity: 0.7; box-shadow: 0 0 8px 3px rgba(255,68,68,0.8); } }
-    .results { width: 40%; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-    .panel { background: #0f0f1a; border: 1px solid #333; border-radius: 4px; padding: 8px; }
-    .panel-title { font-size: 10px; color: #888; text-transform: uppercase; margin-bottom: 6px; }
-    .badge { display: inline-block; padding: 4px 10px; font-weight: bold; border-radius: 3px; }
-    .badge.feasible { background: #00ff88; color: #1a1a2e; }
-    .badge.infeasible { background: #ff4444; color: #fff; }
-    .list { margin: 0; padding: 0; list-style: none; line-height: 1.5; }
-    .pareto-row { display: flex; gap: 6px; }
-    .pareto-card { flex: 1; background: #1a1a2e; border: 1px solid #444; border-radius: 3px; padding: 6px; font-size: 10px; }
-    .pareto-card .label { color: #4488ff; margin-bottom: 4px; font-size: 9px; }
-    .prose { white-space: pre-wrap; line-height: 1.4; font-size: 11px; max-height: 80px; overflow-y: auto; }
-    .ticket { color: #00ff88; font-weight: bold; }
-    .error { color: #ff4444; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #0d0d1a; color: #e8eaf0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+    /* Top bar */
+    #topbar { height: 56px; background: #12122a; border-bottom: 1px solid #1e1e3f; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; }
+    #topbar h1 { font-size: 20px; font-weight: 700; color: #00e676; letter-spacing: -0.5px; display: inline; }
+    #topbar .subtitle { font-size: 12px; color: #6b7280; margin-left: 10px; }
+    #topbar input { background: #1e1e3f; border: 1px solid #2a2d4a; color: #e8eaf0; padding: 8px 14px; border-radius: 6px; font-size: 13px; width: 260px; font-family: 'Inter', sans-serif; outline: none; }
+    #topbar button { background: #00e676; color: #0d0d1a; border: none; padding: 8px 20px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; margin-left: 10px; font-family: 'Inter', sans-serif; }
+
+    /* Main layout */
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #left { width: 55%; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+    #right { width: 45%; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; border-left: 1px solid #1e1e3f; }
+
+    /* Cards */
+    .card { background: #12122a; border: 1px solid #1e1e3f; border-radius: 10px; padding: 16px; }
+    .card-title { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: #6b7280; text-transform: uppercase; margin-bottom: 12px; }
+
+    /* Pod sections */
+    .pod-card { background: #12122a; border: 1px solid #1e1e3f; border-radius: 10px; padding: 16px; }
+    .pod-label { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; color: #448aff; text-transform: uppercase; margin-bottom: 10px; }
+    .rack-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    /* Rack cells */
+    .rack { width: 76px; height: 48px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: monospace; font-size: 11px; font-weight: 700; cursor: default; transition: all 0.2s; border: 1px solid; }
+    .healthy { background: #0d2418; border-color: #00e676; color: #00e676; }
+    .violated { background: #2d0f0f; border-color: #ff4757; color: #ff4757; }
+    .newly-violating { background: #2d0f0f; border-color: #ff4757; color: #ff4757; animation: pulse-glow 1.2s ease-in-out infinite; }
+    .placed { background: #0d1a2d; border-color: #448aff; color: #448aff; }
+    @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 6px rgba(255,71,87,0.4); } 50% { box-shadow: 0 0 18px rgba(255,71,87,0.9); } }
+
+    /* Status badge */
+    .badge { display: inline-block; padding: 6px 18px; border-radius: 20px; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; }
+    .feasible { background: rgba(0,230,118,0.15); color: #00e676; border: 1px solid #00e676; }
+    .infeasible { background: rgba(255,71,87,0.15); color: #ff4757; border: 1px solid #ff4757; }
+    .error { color: #ff4757; }
+
+    /* Pareto cards */
+    .pareto-row { display: flex; gap: 10px; }
+    .pareto-card { flex: 1; background: #0d0d1a; border: 1px solid #1e1e3f; border-radius: 8px; padding: 12px; border-top-width: 3px; }
+    .pareto-card:nth-child(1) { border-top-color: #00e676; }
+    .pareto-card:nth-child(2) { border-top-color: #ffd740; }
+    .pareto-card:nth-child(3) { border-top-color: #448aff; }
+    .pareto-label { font-size: 11px; font-weight: 600; color: #e8eaf0; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pareto-spend { font-size: 18px; font-weight: 700; color: #e8eaf0; margin-bottom: 4px; }
+    .pareto-meta { font-size: 10px; color: #6b7280; }
+
+    /* Text panels */
+    .panel-text { font-size: 13px; line-height: 1.7; color: #c8cad4; white-space: pre-wrap; }
+    .violation-item { padding: 8px 0; border-bottom: 1px solid #1e1e3f; font-size: 12px; color: #c8cad4; }
+    .violation-item:last-child { border-bottom: none; }
+    .iis-block { background: #0d0d1a; border-radius: 6px; padding: 10px; font-size: 12px; color: #c8cad4; margin-bottom: 8px; }
+    .iis-block:last-child { margin-bottom: 0; }
+    .iis-constraints { font-family: monospace; color: #ffd740; font-size: 11px; margin-bottom: 4px; }
+    .critique-text { font-size: 13px; line-height: 1.7; color: #c8cad4; white-space: pre-wrap; border-left: 3px solid #ff4757; padding-left: 12px; }
+    .ticket-text { font-size: 14px; font-weight: 600; color: #00e676; }
+    .placement-item { font-size: 12px; color: #c8cad4; padding: 4px 0; font-family: monospace; }
   </style>
 </head>
 <body>
-  <div class="app">
-    <div class="topbar">
+  <div id="topbar">
+    <div>
       <h1>RackPilot</h1>
-      <div class="topbar-controls">
-        <input id="request-input" type="text" placeholder="place 8 GPU racks" />
-        <button id="run-btn">Run</button>
-      </div>
+      <span class="subtitle">Capacity Engineering Co-pilot</span>
     </div>
-    <div class="main">
-      <div class="facility">
-        <h2>Facility Board</h2>
-        <div id="facility-board"></div>
-      </div>
-      <div class="results">
-        <div class="panel"><div class="panel-title">Status</div><div id="status"></div></div>
-        <div class="panel"><div class="panel-title">Placements</div><ul id="placements" class="list"></ul></div>
-        <div class="panel"><div class="panel-title">Violations</div><ul id="violations" class="list"></ul></div>
-        <div class="panel"><div class="panel-title">IIS</div><div id="iis"></div></div>
-        <div class="panel"><div class="panel-title">Pareto Plans</div><div id="pareto" class="pareto-row"></div></div>
-        <div class="panel"><div class="panel-title">Explanation</div><div id="explanation" class="prose"></div></div>
-        <div class="panel"><div class="panel-title">Critique</div><div id="critique" class="prose"></div></div>
-        <div class="panel"><div class="panel-title">Ticket</div><div id="ticket" class="ticket"></div></div>
-      </div>
+    <div>
+      <input id="request-input" type="text" placeholder="place 8 GPU racks" />
+      <button id="run-btn">Run</button>
+    </div>
+  </div>
+  <div id="main">
+    <div id="left">
+      <div id="facility-board"></div>
+    </div>
+    <div id="right">
+      <div class="card"><div class="card-title">Status</div><div id="status"></div></div>
+      <div class="card"><div class="card-title">Placements</div><div id="placements"></div></div>
+      <div class="card"><div class="card-title">Violations</div><div id="violations"></div></div>
+      <div class="card"><div class="card-title">IIS</div><div id="iis"></div></div>
+      <div class="card"><div class="card-title">Pareto Plans</div><div id="pareto" class="pareto-row"></div></div>
+      <div class="card"><div class="card-title">Explanation</div><div id="explanation" class="panel-text"></div></div>
+      <div class="card"><div class="card-title">Critique</div><div id="critique" class="critique-text"></div></div>
+      <div class="card"><div class="card-title">Ticket</div><div id="ticket" class="ticket-text"></div></div>
     </div>
   </div>
   <script>
@@ -81,7 +106,7 @@
       board.innerHTML = "";
       for (const [pod, racks] of Object.entries(PODS)) {
         const section = document.createElement("div");
-        section.className = "pod";
+        section.className = "pod-card";
         section.innerHTML = `<div class="pod-label">Pod ${pod}</div>`;
         const grid = document.createElement("div");
         grid.className = "rack-grid";
@@ -119,18 +144,18 @@
 
       // All panels render regardless of feasible/infeasible status
       document.getElementById("placements").innerHTML = (r.placements ?? [])
-        .map(p => `<li>${p.rack_id} → pod ${p.pod}, ${p.rack_enclosure}</li>`).join("") || "<li>None</li>";
+        .map(p => `<div class="placement-item">${p.rack_id} → pod ${p.pod}, ${p.rack_enclosure}</div>`).join("") || '<div class="placement-item">None</div>';
 
       document.getElementById("violations").innerHTML = (r.violations ?? [])
-        .map(v => `<li>${v.rack_id}, ${v.rule}: ${v.detail}</li>`).join("") || "<li>None</li>";
+        .map(v => `<div class="violation-item">${v.rack_id}, ${v.rule}: ${v.detail}</div>`).join("") || '<div class="violation-item">None</div>';
 
       const iisList = r.iis ?? [];
       document.getElementById("iis").innerHTML = iisList.length
-        ? iisList.map(i => `<div>[${i.constraints.join(", ")}] ${i.message}</div>`).join("")
+        ? iisList.map(i => `<div class="iis-block"><div class="iis-constraints">[${i.constraints.join(", ")}]</div>${i.message}</div>`).join("")
         : "None";
 
       document.getElementById("pareto").innerHTML = (r.pareto_plans ?? [])
-        .map(p => `<div class="pareto-card"><div class="label">${p.label}</div>$${p.new_spend_usd.toLocaleString()}<br>resilience ${p.resilience}<br>headroom ${p.future_headroom}</div>`).join("");
+        .map(p => `<div class="pareto-card"><div class="pareto-label">${p.label}</div><div class="pareto-spend">$${p.new_spend_usd.toLocaleString()}</div><div class="pareto-meta">resilience ${p.resilience}<br>headroom ${p.future_headroom}</div></div>`).join("");
 
       document.getElementById("explanation").textContent = data.explanation ?? "";
       document.getElementById("critique").textContent = data.critique ?? "";

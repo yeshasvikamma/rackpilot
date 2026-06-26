@@ -26,6 +26,7 @@ from __future__ import annotations
 from typing import Any, List
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from contracts import Constraint, ConstraintSpec, NewRack, SolverResult
@@ -42,6 +43,13 @@ from agents.explainer import explain
 from agents.risk import critique
 
 app = FastAPI(title="RackPilot", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class HandleRequest(BaseModel):
