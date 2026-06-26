@@ -56,10 +56,6 @@ def _dominates(a, b) -> bool:
 # Gate 1 — feasible batch placement
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(
-    reason="real solver not implemented on main; Dev A implements on branch `solver`",
-    strict=False,
-)
 def test_place_batch():
     """8x 40kW N+1 batch -> feasible, all placements in Pod C, pods A & B violate, IIS non-empty."""
     result = solve(SPEC_PLACE_BATCH)
@@ -79,10 +75,6 @@ def test_place_batch():
 # Gate 2 — the break moment
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(
-    reason="real solver not implemented on main; Dev A implements on branch `solver`",
-    strict=False,
-)
 def test_break():
     """From a healthy facility, the feed_B2 derate -> exactly these racks newly violate."""
     result = solve(SPEC_FEED_DERATE)
@@ -95,10 +87,6 @@ def test_break():
 # Gate 3 — Pareto frontier
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(
-    reason="real solver not implemented on main; Dev A implements on branch `solver`",
-    strict=False,
-)
 def test_pareto():
     """pareto_plans has exactly 3 entries and none dominates another."""
     result = solve(SPEC_PLACE_BATCH)
