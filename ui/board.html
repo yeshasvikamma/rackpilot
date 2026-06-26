@@ -124,9 +124,10 @@
       document.getElementById("violations").innerHTML = (r.violations ?? [])
         .map(v => `<li>${v.rack_id}, ${v.rule}: ${v.detail}</li>`).join("") || "<li>None</li>";
 
-      const iis = (r.iis ?? [])[0];
-      document.getElementById("iis").textContent = iis
-        ? `[${iis.constraints.join(", ")}] ${iis.message}` : "None";
+      const iisList = r.iis ?? [];
+      document.getElementById("iis").innerHTML = iisList.length
+        ? iisList.map(i => `<div>[${i.constraints.join(", ")}] ${i.message}</div>`).join("")
+        : "None";
 
       document.getElementById("pareto").innerHTML = (r.pareto_plans ?? [])
         .map(p => `<div class="pareto-card"><div class="label">${p.label}</div>$${p.new_spend_usd.toLocaleString()}<br>resilience ${p.resilience}<br>headroom ${p.future_headroom}</div>`).join("");
