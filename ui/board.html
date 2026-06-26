@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<!--
+  ui/board.html — single-screen facility board.  (STUB — Dev B, branch `agents`)
+
+  Placeholder. The real board renders a SolverResult from POST /handle:
+    - the facility (pods A/B/C, rows, enclosures) with placements highlighted
+    - the 3 Pareto plans side by side (human picks one)
+    - violations + the IIS proof in plain language
+    - the break moment: flash facility_diff.newly_violating on a re-solve
+    - Approve / Reject — the human approval gate (nothing auto-applies)
+
+  During dev, /handle runs against api/mock_solver.py, so this has real data to render.
+  Do not touch data/ or solver/. Consume SolverResult per contracts.py; do not change it.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RackPilot — Facility Board</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 2rem; background: #0f1115; color: #e6e6e6; }
+    h1 { margin: 0 0 .25rem; }
+    .sub { color: #8a8f98; margin-bottom: 2rem; }
+    .placeholder { border: 1px dashed #3a3f4b; border-radius: 12px; padding: 2rem; }
+    .todo { color: #f0a020; }
+    code { background: #1a1d23; padding: .1rem .35rem; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>RackPilot</h1>
+  <div class="sub">Single-screen facility board — placeholder.</div>
+
+  <div class="placeholder">
+    <p class="todo">TODO (Dev B): build the board out.</p>
+    <ul>
+      <li>Fetch a <code>SolverResult</code> from <code>POST /handle</code> (runs against
+          <code>api/mock_solver.py</code> during dev).</li>
+      <li>Render pods A / B / C, rows, enclosures; highlight <code>placements</code>.</li>
+      <li>Show the 3 <code>pareto_plans</code> side by side — the human picks one.</li>
+      <li>Show <code>violations</code> and the <code>iis</code> proof in plain language.</li>
+      <li>On a re-solve, flash <code>facility_diff.newly_violating</code> — the break moment.</li>
+      <li>Approve / Reject buttons — the human approval gate.</li>
+    </ul>
+  </div>
+
+  <!-- Sketch of the dev-time fetch (uncomment + build out on branch `agents`):
+  <script>
+    async function loadBoard() {
+      const res = await fetch('/handle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ request_id: 'demo-1', mode: 'place_batch', sources: [] }),
+      });
+      const data = await res.json();
+      // render data.result (a SolverResult) ...
+    }
+  </script>
+  -->
+</body>
+</html>

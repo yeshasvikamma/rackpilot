@@ -1,0 +1,15 @@
+# RackPilot dependencies
+#
+# Layer 2 (solver) — Dev A
+ortools>=9.10            # CP-SAT: the deterministic solver. No LLM, ever.
+
+# Contracts (shared) — both tracks
+pydantic>=2.6            # Contract A / Contract B models in contracts.py
+
+# Layer 1 / Layer 3 (agents + API) — Dev B
+fastapi>=0.110           # the /handle orchestration endpoint
+uvicorn>=0.29            # ASGI server for the API
+openai>=1.30             # OpenAI-compatible SDK, pointed at the GMI base URL
+
+# Tests — both tracks
+pytest>=8.0              # the 3 solver gates (xfail on main) live in solver/test_solver.py
