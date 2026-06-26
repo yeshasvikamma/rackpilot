@@ -34,9 +34,17 @@ PUBLIC INTERFACE (Terminals B/C/D build against this — keep it stable):
 Determinism is mandatory: same spec in -> same SolverResult out (single worker,
 fixed seed, lexicographic tie-break objective).
 
-`iis` and `pareto_plans` are intentionally left empty here — Terminal B fills IIS,
-Terminal D fills Pareto, both against this interface. The result is always
-schema-valid Contract B.
+solve() returns a COMPLETE Contract B by delegating to the fan-out modules built against
+this interface:
+  * solver.revalidate.revalidate — the break path; for mode="revalidate" it owns the
+    whole result (status, violations, facility_diff). solve() routes to it up front.
+  * solver.iis.compute_iis — the minimal infeasible subset. For a feasible place_batch
+    the batch fits in one pod, so the proofs are PER-REJECTED-POD (pin the cluster to a
+    rejected pod and ask why it can't go there); for a fully-infeasible batch it is one
+    global IIS.
+  * solver.pareto.compute_pareto — the 3-plan non-dominated frontier.
+These modules import build_model from here, so solve() imports them LAZILY to avoid an
+import cycle. The result is always schema-valid Contract B.
 """
 
 from __future__ import annotations
@@ -47,9 +55,11 @@ from typing import Any, Dict, List, Optional, Tuple
 from ortools.sat.python import cp_model
 
 from contracts import (
+    IIS,
     ConstraintSpec,
     NewHardware,
     NewRack,
+    ParetoPlan,
     Placement,
     SolverResult,
     Violation,
@@ -261,7 +271,7 @@ class ModelVars:
     # decision variables
     place: Dict[Tuple[str, str, str, int], Any]           # (rack,pod,enc,u_start) -> BoolVar
     pod_sel: Dict[str, Any]                                # pod -> BoolVar (cluster hosted here)
-    new_switch_pair: Dict[str, Any]                        # pod -> BoolVar (buy a 400G pair)
+    new_switch_pair: Dict[str, Any]                        # pod -> IntVar(0..slots) 400G pairs to buy
     # constraint references
     constraints_by_class: Dict[str, List[Any]] = field(default_factory=dict)
     constraints_by_type: Dict[str, List[Any]] = field(default_factory=dict)
@@ -283,8 +293,11 @@ class ModelVars:
         out.sort(key=lambda pl: (pl.pod, pl.rack_enclosure, pl.u_start))
         return out
 
-    def purchased_pairs(self, solver: cp_model.CpSolver) -> List[str]:
-        return [p for p in self.pods if solver.Value(self.new_switch_pair[p])]
+    def purchased_pairs(self, solver: cp_model.CpSolver) -> Dict[str, int]:
+        """Integer count of 400G switch pairs bought per pod (only pods with > 0)."""
+        return {p: int(solver.Value(self.new_switch_pair[p]))
+                for p in self.pods
+                if solver.Value(self.new_switch_pair[p]) > 0}
 
 
 def _aligned_or_all_starts(enc_u: int, rack_u: int) -> List[int]:
@@ -335,7 +348,14 @@ def build_model(spec: ConstraintSpec,
                         f"place_{r.id}_{p}_{enc_id}_{u}")
 
     pod_sel = {p: model.NewBoolVar(f"pod_sel_{p}") for p in pods}
-    new_switch_pair = {p: model.NewBoolVar(f"new_switch_pair_{p}") for p in pods}
+    # solver-native spend axis: buy 0..slots 400G switch pairs per pod (bounded by the
+    # seed's expansion slots). Feasibility needs at most 1 pair; >1 is only ever bought
+    # for the Pareto resilience / headroom trade-off, never for bare feasibility.
+    new_switch_pair = {
+        p: model.NewIntVar(0, pod_fabric_expansion_slots(facility, p),
+                           f"new_switch_pair_{p}")
+        for p in pods
+    }
 
     # -- AFFINITY: the whole cluster lands in exactly one pod ------------------
     record(model.Add(sum(pod_sel.values()) == 1), AFFINITY)
@@ -374,9 +394,10 @@ def build_model(spec: ConstraintSpec,
         free = pod_free_400g_paths(facility, p)
         slots = pod_fabric_expansion_slots(facility, p)
         fabric = facility["pods"][p]["fabric"]
-        # may only buy a pair in the selected pod, and only as many as there are slots
-        record(model.Add(new_switch_pair[p] <= slots), FABRIC)
-        record(model.Add(new_switch_pair[p] <= pod_sel[p]), FABRIC)
+        # may only buy pairs in the selected pod, up to its expansion slots (the IntVar
+        # domain already caps at slots; this also zeroes purchases in unselected pods,
+        # and with slots == 0 forces new_switch_pair[p] == 0).
+        record(model.Add(new_switch_pair[p] <= slots * pod_sel[p]), FABRIC)
         # if hosted here, free + bought*paths_per_pair must reach the required paths
         record(model.Add(free + new_switch_pair[p] * PATHS_PER_SWITCH_PAIR
                          >= REQUIRED_400G_PATHS * pod_sel[p]), FABRIC)
@@ -478,6 +499,18 @@ def solve(spec: ConstraintSpec,
     if facility is None:
         facility = build_facility()
 
+    # MODE ROUTING (before placement): a revalidate is the break path — the twin-sourced
+    # re-solve owns the whole result (status, violations, facility_diff). Lazy import
+    # avoids the model<->revalidate cycle (revalidate imports build_model/solve from here).
+    if spec.mode == "revalidate":
+        from solver.revalidate import revalidate
+        return revalidate(spec, facility)
+
+    # Fan-out modules import build_model from this module, so import them lazily here
+    # (importing at module load would be circular).
+    from solver.iis import compute_iis
+    from solver.pareto import compute_pareto
+
     racks = list(spec.new_racks)
     model, v = build_model(spec, facility)
     solver = _new_solver()
@@ -489,22 +522,40 @@ def solve(spec: ConstraintSpec,
         new_hardware = [
             NewHardware(item="400G redundant switch pair", pod=p,
                         cost_usd=v.pair_cost)
-            for p in v.purchased_pairs(solver)
+            for p, count in v.purchased_pairs(solver).items()
+            for _ in range(count)
         ]
         violations = _violations_for(facility, racks, skip_pod=chosen)
+
+        # PER-REJECTED-POD IIS: the batch IS feasible (it fits in `chosen`), so a global
+        # IIS is empty. The proof the engineer wants is, for each REJECTED pod, the
+        # minimal subset that blocks pinning the cluster THERE — Pod A: {power_n_plus_1,
+        # affinity}; Pod B: {fabric_oversub, affinity}.
+        iis_entries: List[IIS] = []
+        seen_pods: List[str] = []
+        for viol in violations:
+            if viol.pod in seen_pods:
+                continue
+            seen_pods.append(viol.pod)
+            iis_entries.extend(
+                IIS(**proof) for proof in compute_iis(spec, facility, pin_pod=viol.pod)
+            )
+
+        pareto_plans = [ParetoPlan(**plan) for plan in compute_pareto(spec, facility)]
+
         return SolverResult(
             request_id=spec.request_id,
             status="feasible",
             placements=placements,
             new_hardware=new_hardware,
             violations=violations,
-            pareto_plans=[],
-            iis=[],
+            pareto_plans=pareto_plans,
+            iis=iis_entries,
         )
 
-    # No pod can host the batch — report every pod's binding reason. (Terminal B
-    # adds the minimal IIS proof on top of this.)
+    # No pod can host the batch -> a single global IIS proves why no plan exists at all.
     violations = _violations_for(facility, racks, skip_pod=None)
+    iis_entries = [IIS(**proof) for proof in compute_iis(spec, facility)]
     return SolverResult(
         request_id=spec.request_id,
         status="infeasible",
@@ -512,5 +563,5 @@ def solve(spec: ConstraintSpec,
         new_hardware=[],
         violations=violations,
         pareto_plans=[],
-        iis=[],
+        iis=iis_entries,
     )

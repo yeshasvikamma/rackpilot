@@ -127,7 +127,11 @@ def build_facility() -> Dict[str, Any]:
         },
         feed_pairs=[("feed_A1", "feed_A2"), ("feed_A3", "feed_A4")],
         rows={"A-r1": 300.0, "A-r2": 300.0},
-        enclosures={"A-01": (42, 5000.0), "A-02": (42, 5000.0)},
+        # Floor-tile caps sized so weight is COMFORTABLY NON-binding for the 8x1200kg
+        # batch (8*1200 = 9600kg): 12000kg/enclosure leaves room for 8 racks even in a
+        # single enclosure, and A's 2 enclosures each have 34U free (>= 32U for 8x4U).
+        # So A's only blocker is POWER (N+1 headroom 70kW << 320kW), never space/weight.
+        enclosures={"A-01": (42, 12000.0), "A-02": (42, 12000.0)},
         fabric=_fabric(
             # Pod A fabric is FINE (free paths = 2); A's only failure is power.
             switch_pairs={
@@ -147,7 +151,12 @@ def build_facility() -> Dict[str, Any]:
         },
         feed_pairs=[("feed_B1", "feed_B2"), ("feed_B3", "feed_B4"), ("feed_B5", "feed_B6")],
         rows={"B-r1": 200.0, "B-r2": 250.0, "B-r3": 250.0},
-        enclosures={"B-01": (42, 5000.0), "B-02": (42, 5000.0), "B-03": (42, 5000.0)},
+        # Floor-tile caps sized so weight is COMFORTABLY NON-binding for the 8x1200kg
+        # batch (8*1200 = 9600kg): 12000kg/enclosure holds 8 racks even single-enclosure,
+        # and B's 3 enclosures have 30U/38U/38U free (>= 32U for 8x4U). So B's only
+        # blocker is FABRIC (1 free 400G path, 0 expansion slots -> can't reach 2
+        # independent paths), never space/weight.
+        enclosures={"B-01": (42, 12000.0), "B-02": (42, 12000.0), "B-03": (42, 12000.0)},
         fabric=_fabric(
             # Pod B fabric is the blocker: exactly ONE free path, and NO room to add
             # a new switch pair (0 expansion slots) -> can't reach the 2 required.
