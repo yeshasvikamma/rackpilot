@@ -29,7 +29,7 @@ def chat(role: str, messages: list, max_tokens: int = 512) -> str:
     resp = get_client().chat.completions.create(
         model=MODELS[role],
         messages=messages,
-        max_tokens=max_tokens,
+        max_completion_tokens=max_tokens,
     )
     return resp.choices[0].message.content
 
