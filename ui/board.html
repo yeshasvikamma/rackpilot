@@ -1,60 +1,159 @@
 <!DOCTYPE html>
-<!--
-  ui/board.html — single-screen facility board.  (STUB — Dev B, branch `agents`)
-
-  Placeholder. The real board renders a SolverResult from POST /handle:
-    - the facility (pods A/B/C, rows, enclosures) with placements highlighted
-    - the 3 Pareto plans side by side (human picks one)
-    - violations + the IIS proof in plain language
-    - the break moment: flash facility_diff.newly_violating on a re-solve
-    - Approve / Reject — the human approval gate (nothing auto-applies)
-
-  During dev, /handle runs against api/mock_solver.py, so this has real data to render.
-  Do not touch data/ or solver/. Consume SolverResult per contracts.py; do not change it.
--->
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RackPilot — Facility Board</title>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 0; padding: 2rem; background: #0f1115; color: #e6e6e6; }
-    h1 { margin: 0 0 .25rem; }
-    .sub { color: #8a8f98; margin-bottom: 2rem; }
-    .placeholder { border: 1px dashed #3a3f4b; border-radius: 12px; padding: 2rem; }
-    .todo { color: #f0a020; }
-    code { background: #1a1d23; padding: .1rem .35rem; border-radius: 4px; }
+    * { box-sizing: border-box; }
+    html, body { height: 100vh; margin: 0; overflow: hidden; background: #1a1a2e; color: #e6e6e6; font-family: monospace; font-size: 12px; }
+    .app { display: flex; flex-direction: column; height: 100vh; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 0 16px; border-bottom: 1px solid #333; flex-shrink: 0; }
+    .topbar h1 { margin: 0; font-size: 18px; color: #00ff88; }
+    .topbar-controls { display: flex; gap: 8px; }
+    .topbar input { background: #0f0f1a; border: 1px solid #444; color: #e6e6e6; padding: 6px 10px; width: 220px; font-family: monospace; }
+    .topbar button { background: #4488ff; border: none; color: #fff; padding: 6px 16px; cursor: pointer; font-family: monospace; }
+    .topbar button:hover { opacity: 0.85; }
+    .main { display: flex; flex: 1; min-height: 0; }
+    .facility { width: 60%; padding: 12px; border-right: 1px solid #333; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+    .facility h2 { margin: 0 0 6px; font-size: 13px; color: #888; }
+    .pod { flex: 1; min-height: 0; }
+    .pod-label { font-size: 11px; color: #4488ff; margin-bottom: 4px; }
+    .rack-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+    .rack { width: 52px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 9px; border-radius: 3px; border: 2px solid transparent; }
+    .rack.healthy { background: #00ff88; color: #1a1a2e; }
+    .rack.violated { background: #ff4444; color: #fff; }
+    .rack.newly-violating { background: #ff4444; color: #fff; animation: pulse 1.2s ease-in-out infinite; }
+    .rack.placed { border-color: #4488ff; }
+    @keyframes pulse { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255,68,68,0.6); } 50% { opacity: 0.7; box-shadow: 0 0 8px 3px rgba(255,68,68,0.8); } }
+    .results { width: 40%; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+    .panel { background: #0f0f1a; border: 1px solid #333; border-radius: 4px; padding: 8px; }
+    .panel-title { font-size: 10px; color: #888; text-transform: uppercase; margin-bottom: 6px; }
+    .badge { display: inline-block; padding: 4px 10px; font-weight: bold; border-radius: 3px; }
+    .badge.feasible { background: #00ff88; color: #1a1a2e; }
+    .badge.infeasible { background: #ff4444; color: #fff; }
+    .list { margin: 0; padding: 0; list-style: none; line-height: 1.5; }
+    .pareto-row { display: flex; gap: 6px; }
+    .pareto-card { flex: 1; background: #1a1a2e; border: 1px solid #444; border-radius: 3px; padding: 6px; font-size: 10px; }
+    .pareto-card .label { color: #4488ff; margin-bottom: 4px; font-size: 9px; }
+    .prose { white-space: pre-wrap; line-height: 1.4; font-size: 11px; max-height: 80px; overflow-y: auto; }
+    .ticket { color: #00ff88; font-weight: bold; }
+    .error { color: #ff4444; }
   </style>
 </head>
 <body>
-  <h1>RackPilot</h1>
-  <div class="sub">Single-screen facility board — placeholder.</div>
-
-  <div class="placeholder">
-    <p class="todo">TODO (Dev B): build the board out.</p>
-    <ul>
-      <li>Fetch a <code>SolverResult</code> from <code>POST /handle</code> (runs against
-          <code>api/mock_solver.py</code> during dev).</li>
-      <li>Render pods A / B / C, rows, enclosures; highlight <code>placements</code>.</li>
-      <li>Show the 3 <code>pareto_plans</code> side by side — the human picks one.</li>
-      <li>Show <code>violations</code> and the <code>iis</code> proof in plain language.</li>
-      <li>On a re-solve, flash <code>facility_diff.newly_violating</code> — the break moment.</li>
-      <li>Approve / Reject buttons — the human approval gate.</li>
-    </ul>
+  <div class="app">
+    <div class="topbar">
+      <h1>RackPilot</h1>
+      <div class="topbar-controls">
+        <input id="request-input" type="text" placeholder="place 8 GPU racks" />
+        <button id="run-btn">Run</button>
+      </div>
+    </div>
+    <div class="main">
+      <div class="facility">
+        <h2>Facility Board</h2>
+        <div id="facility-board"></div>
+      </div>
+      <div class="results">
+        <div class="panel"><div class="panel-title">Status</div><div id="status"></div></div>
+        <div class="panel"><div class="panel-title">Placements</div><ul id="placements" class="list"></ul></div>
+        <div class="panel"><div class="panel-title">Violations</div><ul id="violations" class="list"></ul></div>
+        <div class="panel"><div class="panel-title">IIS</div><div id="iis"></div></div>
+        <div class="panel"><div class="panel-title">Pareto Plans</div><div id="pareto" class="pareto-row"></div></div>
+        <div class="panel"><div class="panel-title">Explanation</div><div id="explanation" class="prose"></div></div>
+        <div class="panel"><div class="panel-title">Critique</div><div id="critique" class="prose"></div></div>
+        <div class="panel"><div class="panel-title">Ticket</div><div id="ticket" class="ticket"></div></div>
+      </div>
+    </div>
   </div>
-
-  <!-- Sketch of the dev-time fetch (uncomment + build out on branch `agents`):
   <script>
-    async function loadBoard() {
-      const res = await fetch('/handle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ request_id: 'demo-1', mode: 'place_batch', sources: [] }),
-      });
-      const data = await res.json();
-      // render data.result (a SolverResult) ...
+    const API = "http://127.0.0.1:8001/handle";
+    const BODY = { request_id: "req_001", mode: "place_batch", sources: [] };
+    const PODS = {
+      A: ["r_101","r_102","r_103","r_104","r_105","r_106","r_107","r_108"],
+      B: ["r_109","r_110","r_111","r_112","r_113","r_114","r_115","r_116"],
+      C: ["r_117","r_118","r_119","r_120","r_121","r_122","r_123","r_124"],
+    };
+
+    function buildFacilityShell() {
+      const board = document.getElementById("facility-board");
+      board.innerHTML = "";
+      for (const [pod, racks] of Object.entries(PODS)) {
+        const section = document.createElement("div");
+        section.className = "pod";
+        section.innerHTML = `<div class="pod-label">Pod ${pod}</div>`;
+        const grid = document.createElement("div");
+        grid.className = "rack-grid";
+        for (const id of racks) {
+          const cell = document.createElement("div");
+          cell.className = "rack healthy";
+          cell.dataset.rackId = id;
+          cell.textContent = id;
+          grid.appendChild(cell);
+        }
+        section.appendChild(grid);
+        board.appendChild(section);
+      }
     }
+
+    function render(data) {
+      const r = data.result;
+      // Rack styling uses facility_diff.newly_violating — independent of status
+      const newly = new Set(r.facility_diff?.newly_violating ?? []);
+      const violated = new Set((r.violations ?? []).map(v => v.rack_id));
+      const placed = new Set((r.placements ?? []).map(p => p.rack_id));
+
+      document.querySelectorAll(".rack").forEach(cell => {
+        const id = cell.dataset.rackId;
+        cell.className = "rack";
+        if (newly.has(id)) cell.classList.add("newly-violating");
+        else if (violated.has(id)) cell.classList.add("violated");
+        else cell.classList.add("healthy");
+        if (placed.has(id)) cell.classList.add("placed");
+      });
+
+      const statusEl = document.getElementById("status");
+      const isFeasible = r.status === "feasible";
+      statusEl.innerHTML = `<span class="badge ${isFeasible ? "feasible" : "infeasible"}">${isFeasible ? "FEASIBLE" : "INFEASIBLE"}</span>`;
+
+      // All panels render regardless of feasible/infeasible status
+      document.getElementById("placements").innerHTML = (r.placements ?? [])
+        .map(p => `<li>${p.rack_id} → pod ${p.pod}, ${p.rack_enclosure}</li>`).join("") || "<li>None</li>";
+
+      document.getElementById("violations").innerHTML = (r.violations ?? [])
+        .map(v => `<li>${v.rack_id}, ${v.rule}: ${v.detail}</li>`).join("") || "<li>None</li>";
+
+      const iis = (r.iis ?? [])[0];
+      document.getElementById("iis").textContent = iis
+        ? `[${iis.constraints.join(", ")}] ${iis.message}` : "None";
+
+      document.getElementById("pareto").innerHTML = (r.pareto_plans ?? [])
+        .map(p => `<div class="pareto-card"><div class="label">${p.label}</div>$${p.new_spend_usd.toLocaleString()}<br>resilience ${p.resilience}<br>headroom ${p.future_headroom}</div>`).join("");
+
+      document.getElementById("explanation").textContent = data.explanation ?? "";
+      document.getElementById("critique").textContent = data.critique ?? "";
+      document.getElementById("ticket").textContent = data.ticket ?? "";
+    }
+
+    async function load() {
+      document.getElementById("status").innerHTML = '<span class="badge">LOADING...</span>';
+      try {
+        const res = await fetch(API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(BODY),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        render(await res.json());
+      } catch (e) {
+        document.getElementById("status").innerHTML = `<span class="error">Error: ${e.message}</span>`;
+      }
+    }
+
+    buildFacilityShell();
+    document.getElementById("run-btn").addEventListener("click", load);
+    load();
   </script>
-  -->
 </body>
 </html>
